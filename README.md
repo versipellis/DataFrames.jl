@@ -18,6 +18,11 @@ Tools for working with tabular data in Julia.
 **Maintenance**: DataFrames is maintained collectively by the [JuliaStats collaborators](https://github.com/orgs/JuliaStats/people).
 Responsiveness to pull requests and issues can vary, depending on the availability of key collaborators.
 
+For reading and writing tabular data, load the [CSV.jl](https://github.com/JuliaStats/CSV.jl) package with
+```julia
+using CSV
+```
+
 [docs-latest-img]: https://img.shields.io/badge/docs-latest-blue.svg
 [docs-latest-url]: http://JuliaStats.github.io/DataFrames.jl/latest/
 

@@ -22,6 +22,3 @@ import Base: keys, values, insert!
 
 @deprecate stackdf stackdf
 @deprecate meltdf meltdf
-
-@deprecate readtable CSV.read
-@deprecate writetable CSV.write
