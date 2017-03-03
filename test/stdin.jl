@@ -1,6 +1,7 @@
 using DataFrames
+using CSV
 
-df = readtable(STDIN)
+df = CSV.read(STDIN)
 
 io = IOBuffer()
 print(io, df)

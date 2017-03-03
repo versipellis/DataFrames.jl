@@ -6,7 +6,7 @@ cd(Pkg.dir("DataFrames", "test", "data")) do
     for folder in folders
         for filename in readdir(folder)
             relpath = joinpath(folder, filename)
-            df = benchmark(() -> readtable(relpath),
+            df = benchmark(() -> CSV.read(relpath),
                            "DataFrame I/O",
                            relpath,
                            N)
