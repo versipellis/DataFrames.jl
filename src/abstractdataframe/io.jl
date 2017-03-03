@@ -76,6 +76,11 @@ function printtable(df::AbstractDataFrame;
                nastring = nastring)
     return
 end
+##############################################################################
+#
+# HTML output
+#
+##############################################################################
 
 function html_escape(cell::AbstractString)
     cell = replace(cell, "&", "&amp;")
