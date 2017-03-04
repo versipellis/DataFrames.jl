@@ -128,6 +128,14 @@ df = DataFrame(A = 1:4, B = randn(4))
 colwise(c->cumsum(dropnull(c)), df)
 ```
 
+
+## IO
+
+For reading and writing tabular data, load the [CSV.jl](https://github.com/JuliaStats/CSV.jl) package with
+```julia
+using CSV
+```
+
 ## Accessing Classic Data Sets
 
 To see more of the functionality for working with `DataFrame` objects, we need a more complex data set to work with. We'll use the `RDatasets` package, which provides access to many of the classical data sets that are available in R.
