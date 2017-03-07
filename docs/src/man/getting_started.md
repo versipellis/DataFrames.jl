@@ -139,10 +139,10 @@ Pkg.add("CSV")
 
 The CSV.jl functions are not loaded automatically and must be imported into the session.
 ```julia
-# can be imported seperately
+# can be imported separately
 using DataFrames
 using CSV
-# or imported together, seperated by commas
+# or imported together, separated by commas
 using DataFrames, CSV
 ```
 
