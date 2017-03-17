@@ -196,7 +196,7 @@ end
 
 ##############################################################################
 #
-# CSV/DataStreams-based IO
+# DataStreams-based IO
 #
 ##############################################################################
 
@@ -206,7 +206,7 @@ using WeakRefStrings
 # DataFrames DataStreams implementation
 function Data.schema(df::DataFrame, ::Type{Data.Column})
     return Data.Schema(map(string, names(df)),
-           DataType[typeof(A) for A in df.columns], size(df, 1))
+                       DataType[typeof(A) for A in df.columns], size(df, 1))
 end
 
 # DataFrame as a Data.Source
@@ -218,12 +218,12 @@ end
 Data.streamtype(::Type{DataFrame}, ::Type{Data.Column}) = true
 Data.streamtype(::Type{DataFrame}, ::Type{Data.Field}) = true
 
-Data.streamfrom{T <: AbstractVector}(source::DataFrame, ::Type{Data.Column}, ::Type{T}, col) = (
-    @inbounds A = source.columns[col]::T; return A)
-Data.streamfrom{T}(source::DataFrame, ::Type{Data.Column}, ::Type{T}, col) = (
-    @inbounds A = source.columns[col]; return A)
-Data.streamfrom{T}(source::DataFrame, ::Type{Data.Field}, ::Type{T}, row, col) = (
-    @inbounds A = Data.streamfrom(source, Data.Column, T, col); return A[row]::T)
+Data.streamfrom{T <: AbstractVector}(source::DataFrame, ::Type{Data.Column}, ::Type{T}, col) =
+    (@inbounds A = source.columns[col]::T; return A)
+Data.streamfrom{T}(source::DataFrame, ::Type{Data.Column}, ::Type{T}, col) =
+    (@inbounds A = source.columns[col]; return A)
+Data.streamfrom{T}(source::DataFrame, ::Type{Data.Field}, ::Type{T}, row, col) =
+    (@inbounds A = Data.streamfrom(source, Data.Column, T, col); return A[row]::T)
 
 # DataFrame as a Data.Sink
 allocate{T}(::Type{T}, rows, ref) = Array{T}(rows)
@@ -268,8 +268,7 @@ function DataFrame(sink, sch::Data.Schema, ::Type{Data.Field}, append::Bool,
     if append
         for (i, T) in enumerate(Data.types(sch))
             if T <: Nullable{WeakRefString{UInt8}}
-                sink.columns[i] = NullableArray(String[string(get(x, ""))
-                                                       for x in sink.columns[i]])
+                sink.columns[i] = NullableArray(String[string(get(x, "")) for x in sink.columns[i]])
                 sch.types[i] = Nullable{String}
             end
         end
@@ -286,61 +285,24 @@ end
 
 Data.streamtypes(::Type{DataFrame}) = [Data.Column, Data.Field]
 
-Data.streamto!{T}(sink::DataFrame,
-                  ::Type{Data.Field},
-                  val::T,
-                  row,
-                  col,
-                  sch::Data.Schema{false}) = push!(sink.columns[col]::Vector{T}, val)
-Data.streamto!{T}(sink::DataFrame,
-                  ::Type{Data.Field},
-                  val::Nullable{T},
-                  row,
-                  col,
-                  sch::Data.Schema{false}) = push!(sink.columns[col]::NullableVector{T}, val)
-Data.streamto!{T, R}(sink::DataFrame,
-                     ::Type{Data.Field},
-                     val::CategoricalValue{T, R},
-                     row,
-                     col,
-                     sch::Data.Schema{false}) = push!(sink.columns[col]::CategoricalVector{T, R}, val)
-Data.streamto!{T, R}(sink::DataFrame,
-                     ::Type{Data.Field},
-                     val::Nullable{CategoricalValue{T, R}},
-                     row,
-                     col,
-                     sch::Data.Schema{false}) = push!(sink.columns[col]::NullableCategoricalVector{T, R}, val)
-
-Data.streamto!{T}(sink::DataFrame,
-                  ::Type{Data.Field},
-                  val::T,
-                  row,
-                  col,
-                  sch::Data.Schema{true}) = (sink.columns[col]::Vector{T})[row] = val
-Data.streamto!{T}(sink::DataFrame,
-                  ::Type{Data.Field},
-                  val::Nullable{T},
-                  row,
-                  col,
-                  sch::Data.Schema{true}) = (sink.columns[col]::NullableVector{T})[row] = val
-Data.streamto!(sink::DataFrame,
-               ::Type{Data.Field},
-               val::Nullable{WeakRefString{UInt8}},
-               row,
-               col,
-               sch::Data.Schema{true}) = sink.columns[col][row] = val
-Data.streamto!{T, R}(sink::DataFrame,
-                     ::Type{Data.Field},
-                     val::CategoricalValue{T, R},
-                     row,
-                     col,
-                     sch::Data.Schema{true}) = (sink.columns[col]::CategoricalVector{T, R})[row] = val
-Data.streamto!{T, R}(sink::DataFrame,
-                     ::Type{Data.Field},
-                     val::Nullable{CategoricalValue{T, R}},
-                     row,
-                     col,
-                     sch::Data.Schema{true}) = (sink.columns[col]::NullableCategoricalVector{T, R})[row] = val
+Data.streamto!{T}(sink::DataFrame, ::Type{Data.Field}, val::T, row, col, sch::Data.Schema{false}) =
+    push!(sink.columns[col]::Vector{T}, val)
+Data.streamto!{T}(sink::DataFrame, ::Type{Data.Field}, val::Nullable{T}, row, col, sch::Data.Schema{false}) =
+    push!(sink.columns[col]::NullableVector{T}, val)
+Data.streamto!{T, R}(sink::DataFrame, ::Type{Data.Field}, val::CategoricalValue{T, R}, row, col, sch::Data.Schema{false}) =
+    push!(sink.columns[col]::CategoricalVector{T, R}, val)
+Data.streamto!{T, R}(sink::DataFrame, ::Type{Data.Field}, val::Nullable{CategoricalValue{T, R}}, row, col, sch::Data.Schema{false}) =
+    push!(sink.columns[col]::NullableCategoricalVector{T, R}, val)
+Data.streamto!{T}(sink::DataFrame, ::Type{Data.Field}, val::T, row, col, sch::Data.Schema{true}) =
+    (sink.columns[col]::Vector{T})[row] = val
+Data.streamto!{T}(sink::DataFrame, ::Type{Data.Field}, val::Nullable{T}, row, col, sch::Data.Schema{true}) =
+    (sink.columns[col]::NullableVector{T})[row] = val
+Data.streamto!(sink::DataFrame, ::Type{Data.Field}, val::Nullable{WeakRefString{UInt8}}, row, col, sch::Data.Schema{true}) =
+    sink.columns[col][row] = val
+Data.streamto!{T, R}(sink::DataFrame, ::Type{Data.Field}, val::CategoricalValue{T, R}, row, col, sch::Data.Schema{true}) =
+    (sink.columns[col]::CategoricalVector{T, R})[row] = val
+Data.streamto!{T, R}(sink::DataFrame, ::Type{Data.Field}, val::Nullable{CategoricalValue{T, R}}, row, col, sch::Data.Schema{true}) =
+    (sink.columns[col]::NullableCategoricalVector{T, R})[row] = val
 
 function Data.streamto!{T}(sink::DataFrame, ::Type{Data.Column}, column::T, row, col, sch::Data.Schema)
     if row == 0
