@@ -201,11 +201,12 @@ end
 ##############################################################################
 
 importall DataStreams
+using WeakRefStrings
 
 # DataFrames DataStreams implementation
 function Data.schema(df::DataFrame, ::Type{Data.Column})
     return Data.Schema(map(string, names(df)),
-            DataType[typeof(A) for A in df.columns], size(df, 1))
+           DataType[typeof(A) for A in df.columns], size(df, 1))
 end
 
 # DataFrame as a Data.Source
