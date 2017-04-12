@@ -113,8 +113,8 @@ module TestCat
     end
 
     # Minimal container type promotion
-    dfa = DataFrame(a = CategoricalArray([1, 2, 2]))
-    dfb = DataFrame(a = CategoricalArray([2, 3, 4]))
+    dfa = DataFrame(a = NullableCategoricalArray([1, 2, 2]))
+    dfb = DataFrame(a = NullableCategoricalArray([2, 3, 4]))
     dfc = DataFrame(a = NullableArray([2, 3, 4]))
     dfd = DataFrame(Any[2:4], [:a])
     dfab = vcat(dfa, dfb)
@@ -122,13 +122,7 @@ module TestCat
     @test isequal(dfab[:a], Nullable{Int}[1, 2, 2, 2, 3, 4])
     @test isequal(dfac[:a], Nullable{Int}[1, 2, 2, 2, 3, 4])
     @test isa(dfab[:a], NullableCategoricalVector{Int})
-    # Fails on Julia 0.4 since promote_type(Nullable{Int}, Nullable{Float64}) gives Nullable{T}
-    if VERSION >= v"0.5.0-dev"
-        @test isa(dfac[:a], NullableCategoricalVector{Int})
-    else
-        @test isa(dfac[:a], NullableCategoricalVector{Any})
-    end
-    # ^^ container may flip if container promotion happens in Base/DataArrays
+    @test isa(dfac[:a], NullableCategoricalVector{Int})
     dc = vcat(dfd, dfc)
     @test isequal(vcat(dfc, dfd), dc)
 
@@ -147,5 +141,7 @@ module TestCat
     @test isequal(vcat(dfda, dfd, dfa), vcat(dfda, dfda))
 
     # vcat should be able to concatenate different implementations of AbstractDataFrame (PR #944)
-    @test isequal(vcat(view(DataFrame(A=1:3),2),DataFrame(A=4:5)), DataFrame(A=[2,4,5]))
+    x = view(DataFrame(A = NullableArray(1:3)), 2)
+    y = DataFrame(A = NullableArray(4:5))
+    @test isequal(vcat(x, y), DataFrame(A = NullableArray([2, 4, 5])))
 end
