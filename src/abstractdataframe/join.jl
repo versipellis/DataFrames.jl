@@ -3,17 +3,20 @@
 ##
 
 # Like similar, but returns a nullable array
-similar_nullable{T}(dv::AbstractArray{T}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
-    NullableArray(T, dims)
+similar_nullable{T}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
+    NullableArray{T}(dims)
 
-similar_nullable{T<:Nullable}(dv::AbstractArray{T}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
-    NullableArray(eltype(T), dims)
+similar_nullable{T<:Nullable}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
+    NullableArray{eltype(T)}(dims)
 
-similar_nullable{T,R}(dv::CategoricalArray{T,R}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
-    NullableCategoricalArray(T, dims)
+similar_nullable{T,R}(dv::CategoricalArray{T,R}, dims::Union{Int, Tuple{Vararg{Int}}}) =
+    NullableCategoricalArray{T}(dims)
 
 similar_nullable(df::AbstractDataFrame, dims::Int) =
     DataFrame(Any[similar_nullable(x, dims) for x in columns(df)], copy(index(df)))
+
+similar_nullable{T,R}(dv::NullableCategoricalArray{T,R}, dims::Union{Int, Tuple{Vararg{Int}}}) =
+    NullableCategoricalArray{T}(dims)
 
 # helper structure for DataFrames joining
 immutable DataFrameJoiner{DT1<:AbstractDataFrame, DT2<:AbstractDataFrame}
