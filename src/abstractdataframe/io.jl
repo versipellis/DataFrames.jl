@@ -228,9 +228,9 @@ importall DataStreams
 using WeakRefStrings, Nulls
 
 # DataFrames DataStreams implementation
-function Data.schema(df::DataFrame, ::Type{Data.Batch})
+function Data.schema(df::DataFrame, ::Type{Data.Column})
     return Data.Schema(map(string, names(df)),
-                       DataType[typeof(A) for A in df.columns], size(df, 1))
+                       Type[typeof(A) for A in df.columns], size(df, 1))
 end
 
 # DataFrame as a Data.Source
@@ -239,65 +239,74 @@ function Data.isdone(source::DataFrame, row, col)
     return row > rows || col > cols
 end
 
-Data.streamtype(::Type{DataFrame}, ::Type{Data.Batch}) = true
-Data.streamtype(::Type{DataFrame}, ::Type{Data.Row}) = true
+Data.streamtype(::Type{DataFrame}, ::Type{Data.Column}) = true
+Data.streamtype(::Type{DataFrame}, ::Type{Data.Field}) = true
 
-Data.streamfrom{T <: AbstractVector}(source::DataFrame, ::Type{Data.Batch}, ::Type{T}, col) =
-    (@inbounds A = source.columns[col]::T; return A)
-Data.streamfrom{T}(source::DataFrame, ::Type{Data.Batch}, ::Type{T}, col) =
-    (@inbounds A = source.columns[col]; return A)
-Data.streamfrom{T}(source::DataFrame, ::Type{Data.Row}, ::Type{T}, row, col) =
-    (@inbounds A = Data.streamfrom(source, Data.Batch, T, col); return A[row]::T)
+# Data.streamfrom{T <: AbstractVector}(source::DataFrame, ::Type{Data.Column}, ::Type{T}, col) =
+#     (A = source.columns[col]::T; return A)
+Data.streamfrom{T}(source::DataFrame, ::Type{Data.Column}, ::Type{T}, col) =
+    (A = source.columns[col]::AbstractVector{T}; return A)
+Data.streamfrom{T}(source::DataFrame, ::Type{Data.Field}, ::Type{T}, row, col) =
+    (A = source.columns[col]::AbstractVector{T}; return A[row]::T)
 
 # DataFrame as a Data.Sink
-allocate{T}(::Type{T}, rows) = Vector{T}(rows)
-allocate{T}(::Type{Vector{T}}, rows) = Vector{T}(rows)
+allocate{T}(::Type{T}, rows, ref) = Vector{T}(rows)
+allocate{T}(::Type{Vector{T}}, rows, ref) = Vector{T}(rows)
+allocate{T <: ?WeakRefString}(::Type{T}, rows, ref) = WeakRefStringArray(ref, T, rows)
+
+type DataFrameSink{T}
+    columns::T
+    header::Vector{String}
+end
 
 function DataFrame{T <: Data.StreamType}(sch::Data.Schema,
-                                         ::Type{T}=Data.Row,
-                                         append::Bool=false, args...)
+                                         ::Type{T}=Data.Field,
+                                         append::Bool=false, args...;
+                                         reference::Vector{UInt8}=UInt8[])
     rows, cols = size(sch)
-    rows = max(0, T <: Data.Batch ? 0 : rows) # don't pre-allocate for Column streaming
+    rows = max(0, T <: Data.Column ? 0 : rows) # don't pre-allocate for Column streaming
     println("pre-allocating DataFrame w/ rows = $rows")
-    columns = Vector{Any}(cols)
     types = Data.types(sch)
-    for i = 1:cols
-        columns[i] = allocate(types[i], rows)
-    end
-    return DataFrame(columns, map(Symbol, Data.header(sch)))
+    columns = ((allocate(types[i], rows, reference) for i = 1:cols)...)
+    return DataFrameSink(columns, Data.header(sch))
 end
 
 # given an existing DataFrame (`sink`), make any necessary changes for streaming source
 # with Data.Schema `sch` to it, given we know if we'll be `appending` or not
-function DataFrame(sink, sch::Data.Schema, ::Type{Data.Row}, append::Bool)
+function DataFrame(sink, sch::Data.Schema, ::Type{Data.Field}, append::Bool)
     rows, cols = size(sch)
     newsize = max(0, rows) + (append ? size(sink, 1) : 0)
     newsize != size(sink, 1) && foreach(x->resize!(x, newsize), sink.columns)
     sch.rows = newsize
     return sink
 end
-function DataFrame(sink, sch::Data.Schema, ::Type{Data.Batch}, append::Bool)
+function DataFrame(sink, sch::Data.Schema, ::Type{Data.Column}, append::Bool)
     rows, cols = size(sch)
     append ? (sch.rows += size(sink, 1)) : foreach(empty!, sink.columns)
     return sink
 end
 
-Data.streamtypes(::Type{DataFrame}) = [Data.Batch, Data.Row]
+Data.streamtypes(::Type{DataFrame}) = [Data.Column, Data.Field]
+Data.weakrefstrings(::Type{DataFrame}) = true
 
-Data.streamto!{T}(sink::DataFrame, ::Type{Data.Row}, val::T, row, col, sch::Data.Schema{false}) =
-    push!(sink.columns[col], val)
-# Data.streamto!{T}(sink::DataFrame, ::Type{Data.Row}, val::Nullable{T}, row, col, sch::Data.Schema{false}) =
-#     push!(sink.columns[col]::DataVector{T}, get(val, NA))
-Data.streamto!{T}(sink::DataFrame, ::Type{Data.Row}, val::T, row, col, sch::Data.Schema{true}) =
+@inline Data.streamto!{C, T, N}(sink::DataFrameSink{C}, ::Type{Data.Field}, val::T, row, ::Type{Val{N}}, ::Type{Val{false}}) =
+    push!(sink.columns[N], val)
+# Data.streamto!{C, T}(sink::DataFrameSink{C}, ::Type{Data.Field}, val::Nullable{T}, row, ::Type{Val{N}}, sch::Data.Schema{false}) =
+#     push!(sink.columns[N]::DataVector{T}, get(val, NA))
+@inline Data.streamto!{C, T}(sink::DataFrameSink{C}, ::Type{Data.Field}, val::T, row, col::Int, ::Type{Val{true}}) =
     (sink.columns[col])[row] = val
-# Data.streamto!{T}(sink::DataFrame, ::Type{Data.Row}, val::Nullable{T}, row, col, sch::Data.Schema{true}) =
-#     (sink.columns[col]::DataVector{T})[row] = get(val, NA)
+# Data.streamto!{C, T}(sink::DataFrameSink{C}, ::Type{Data.Field}, val::Nullable{T}, row, ::Type{Val{N}}, sch::Data.Schema{true}) =
+#     (sink.columns[N]::DataVector{T})[row] = get(val, NA)
 
-function Data.streamto!{T}(sink::DataFrame, ::Type{Data.Batch}, column::T, row, col, sch::Data.Schema)
+function Data.streamto!{C, T}(sink::DataFrameSink{C}, ::Type{Data.Column}, column::T, row, col)
     if row == 0
         sink.columns[col] = column
     else
         append!(sink.columns[col]::T, column)
     end
     return length(column)
+end
+
+function Data.close!(df::DataFrameSink)
+    return DataFrame(collect(Any, df.columns), map(Symbol, df.header))
 end
