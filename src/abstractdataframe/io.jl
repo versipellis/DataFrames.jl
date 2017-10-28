@@ -21,7 +21,7 @@ function printtable(io::IO,
     n, p = size(df)
     etypes = eltypes(df)
     if header
-        cnames = _names(df)
+        cnames = names(df)
         for j in 1:p
             print(io, quotemark)
             print(io, cnames[j])
@@ -84,7 +84,7 @@ function html_escape(cell::AbstractString)
 end
 
 function Base.show(io::IO, ::MIME"text/html", df::AbstractDataFrame)
-    cnames = _names(df)
+    cnames = names(df)
     write(io, "<table class=\"data-frame\">")
     write(io, "<thead>")
     write(io, "<tr>")
@@ -148,7 +148,7 @@ end
 function Base.show(io::IO, ::MIME"text/latex", df::AbstractDataFrame)
     nrows = size(df, 1)
     ncols = size(df, 2)
-    cnames = _names(df)
+    cnames = names(df)
     alignment = repeat("c", ncols)
     write(io, "\\begin{tabular}{r|")
     write(io, alignment)

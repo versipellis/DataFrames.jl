@@ -110,7 +110,6 @@ Base.getindex(gd::GroupedDataFrame, I::AbstractArray{Bool}) =
     GroupedDataFrame(gd.parent, gd.cols, gd.idx, gd.starts[I], gd.ends[I])
 
 Base.names(gd::GroupedDataFrame) = names(gd.parent)
-_names(gd::GroupedDataFrame) = _names(gd.parent)
 
 ##############################################################################
 ##
@@ -130,7 +129,7 @@ _names(gd::GroupedDataFrame) = _names(gd.parent)
 The result of a `map` operation on a GroupedDataFrame; mainly for use
 with `combine`
 
-Not meant to be constructed directly, see `groupby` abnd
+Not meant to be constructed directly, see `groupby` and
 `combine`. Minimal support is provided for this type. `map` is
 provided for a GroupApplied object.
 
@@ -338,14 +337,14 @@ aggregate(groupby(df, :a), [sum, x->mean(skipmissing(x))])
 """
 aggregate(d::AbstractDataFrame, fs::Function; sort::Bool=false) = aggregate(d, [fs], sort=sort)
 function aggregate(d::AbstractDataFrame, fs::Vector{T}; sort::Bool=false) where T<:Function
-    headers = _makeheaders(fs, _names(d))
+    headers = _makeheaders(fs, names(d))
     _aggregate(d, fs, headers, sort)
 end
 
 # Applies aggregate to non-key cols of each SubDataFrame of a GroupedDataFrame
 aggregate(gd::GroupedDataFrame, f::Function; sort::Bool=false) = aggregate(gd, [f], sort=sort)
 function aggregate(gd::GroupedDataFrame, fs::Vector{T}; sort::Bool=false) where T<:Function
-    headers = _makeheaders(fs, setdiff(_names(gd), gd.cols))
+    headers = _makeheaders(fs, setdiff(names(gd), gd.cols))
     res = combine(map(x -> _aggregate(without(x, gd.cols), fs, headers), gd))
     sort && sort!(res, cols=headers)
     res

@@ -98,6 +98,7 @@ function compose_joined_table(joiner::DataFrameJoiner, kind::Symbol,
         copy!(cols[i+ncleft], view(col, all_orig_right_ixs))
         permute!(cols[i+ncleft], right_perm)
     end
+    @show names(joiner.dfl), names(dfr_noon)
     res = DataFrame(cols, vcat(names(joiner.dfl), names(dfr_noon)))
 
     if length(rightonly_ixs.join) > 0

@@ -1,5 +1,6 @@
 module TestDataFrame
     using Compat, Compat.Test, DataFrames
+    using DataFrames: columns
     const ≅ = isequal
     const ≇ = !isequal
 
@@ -51,15 +52,10 @@ module TestDataFrame
     @test names(dfc[1, :b]) == [:c, :e]
     @test names(dfdc[1, :b]) == [:c]
 
-    #
-
+    # Indexing with duplicate indices
     x = DataFrame(a = [1, 2, 3], b = [4, 5, 6])
-    v = DataFrame(a = [5, 6, 7], b = [8, 9, 10])
-
-    z = vcat(v, x)
-
-    z2 = z[:, [1, 1, 2]]
-    @test names(z2) == [:a, :a_1, :b]
+    @test_throws ArgumentError x[:, [1, 1, 2]]
+    @test_throws ArgumentError x[:, [:a, :b, :b]]
 
     #test_group("DataFrame assignment")
     # Insert single column
@@ -91,12 +87,12 @@ module TestDataFrame
     df = DataFrame(a=[1, 2], b=[3.0, 4.0])
     @test haskey(df, :a)
     @test !haskey(df, :c)
-    @test get(df, :a, -1) === df.columns[1]
+    @test get(df, :a, -1) === df[1]
     @test get(df, :c, -1) == -1
     @test !isempty(df)
 
     @test empty!(df) === df
-    @test isempty(df.columns)
+    @test isempty(columns(df))
     @test isempty(df)
     @test isempty(DataFrame(a=[], b=[]))
 
@@ -111,7 +107,7 @@ module TestDataFrame
 
     df = DataFrame(a=[1, 2], b=[3.0, 4.0])
     df2 = DataFrame(b=["a", "b"], c=[:c, :d])
-    @test merge!(df, df2) == df
+    @test merge!(df, df2) === df
     @test df == DataFrame(a=[1, 2], b=["a", "b"], c=[:c, :d])
 
     #test_group("Empty DataFrame constructors")
@@ -377,19 +373,20 @@ module TestDataFrame
     @test append!(DataFrame(A = 1:2, B = 1:2), DataFrame(A = 3:4, B = 3:4)) == DataFrame(A=1:4, B = 1:4)
     df = DataFrame(A = Vector{Union{Int, Missing}}(1:3), B = Vector{Union{Int, Missing}}(4:6))
     DRT = CategoricalArrays.DefaultRefType
-    @test all(c -> isa(c, Vector{Union{Int, Missing}}), categorical!(deepcopy(df)).columns)
+    @test all(c -> isa(c, Vector{Union{Int, Missing}}),
+              columns(categorical!(deepcopy(df))))
     @test all(c -> typeof(c) <: CategoricalVector{Union{Int, Missing}},
-              categorical!(deepcopy(df), [1,2]).columns)
+              columns(categorical!(deepcopy(df), [1,2])))
     @test all(c -> typeof(c) <: CategoricalVector{Union{Int, Missing}},
-              categorical!(deepcopy(df), [:A,:B]).columns)
+              columns(categorical!(deepcopy(df), [:A,:B])))
     @test findfirst(c -> typeof(c) <: CategoricalVector{Union{Int, Missing}},
-                    categorical!(deepcopy(df), [:A]).columns) == 1
+                    columns(categorical!(deepcopy(df), [:A]))) == 1
     @test findfirst(c -> typeof(c) <: CategoricalVector{Union{Int, Missing}},
-                    categorical!(deepcopy(df), :A).columns) == 1
+                    columns(categorical!(deepcopy(df), :A))) == 1
     @test findfirst(c -> typeof(c) <: CategoricalVector{Union{Int, Missing}},
-                    categorical!(deepcopy(df), [1]).columns) == 1
+                    columns(categorical!(deepcopy(df), [1]))) == 1
     @test findfirst(c -> typeof(c) <: CategoricalVector{Union{Int, Missing}},
-                    categorical!(deepcopy(df), 1).columns) == 1
+                    columns(categorical!(deepcopy(df), 1))) == 1
 
     @testset "unstack promotion to support missing values" begin
         df = DataFrame(Any[repeat(1:2, inner=4), repeat('a':'d', outer=2), collect(1:8)],
@@ -400,7 +397,7 @@ module TestDataFrame
                                    Union{Int, Missing}[2, 6], Union{Int, Missing}[3, 7],
                                    Union{Int, Missing}[4, 8]], [:id, :a, :b, :c, :d])
         @test isa(udf[1], Vector{Int})
-        @test all(isa.(udf.columns[2:end], Vector{Union{Int, Missing}}))
+        @test all(c -> c isa Vector{Union{Int, Missing}}, columns(udf)[2:end])
         df = DataFrame(Any[categorical(repeat(1:2, inner=4)),
                            categorical(repeat('a':'d', outer=2)), categorical(1:8)],
                        [:id, :variable, :value])
@@ -410,7 +407,7 @@ module TestDataFrame
                                    Union{Int, Missing}[2, 6], Union{Int, Missing}[3, 7],
                                    Union{Int, Missing}[4, 8]], [:id, :a, :b, :c, :d])
         @test isa(udf[1], CategoricalVector{Int})
-        @test all(isa.(udf.columns[2:end], CategoricalVector{Union{Int, Missing}}))
+        @test all(c -> c isa CategoricalVector{Union{Int, Missing}}, columns(udf)[2:end])
     end
 
     @testset "duplicate entries in unstack warnings" begin

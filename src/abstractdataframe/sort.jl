@@ -147,7 +147,7 @@ function ordering(df::AbstractDataFrame, cols::AbstractVector, lt::Function, by:
 
     for col in cols
         push!(ords, ordering(col, lt, by, rev, order))
-        push!(newcols, index(df)[(_getcol(col))])
+        push!(newcols, int_colinds(df, _getcol(col)))
     end
 
     # Simplify ordering when all orderings are the same

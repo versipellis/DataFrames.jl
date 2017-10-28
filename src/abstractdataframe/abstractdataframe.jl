@@ -67,7 +67,6 @@ abstract type AbstractDataFrame end
 ##
 ##############################################################################
 
-# index(df) => AbstractIndex
 # nrow(df) => Int
 # ncol(df) => Int
 # getindex(...)
@@ -79,36 +78,34 @@ abstract type AbstractDataFrame end
 ##
 ##############################################################################
 
-struct Cols{T <: AbstractDataFrame} <: AbstractVector{Any}
-    df::T
-end
-Base.start(::Cols) = 1
-Base.done(itr::Cols, st) = st > length(itr.df)
-Base.next(itr::Cols, st) = (itr.df[st], st + 1)
-Base.length(itr::Cols) = length(itr.df)
-Base.size(itr::Cols, ix) = ix==1 ? length(itr) : throw(ArgumentError("Incorrect dimension"))
-Base.size(itr::Cols) = (length(itr.df),)
-Base.IndexStyle(::Type{<:Cols}) = IndexLinear()
-Base.getindex(itr::Cols, inds...) = getindex(itr.df, inds...)
+const ColumnIndex = Union{Integer, Symbol}
 
-# N.B. where stored as a vector, 'columns(x) = x.vector' is a bit cheaper
-columns(df::T) where {T <: AbstractDataFrame} = Cols{T}(df)
+# TODO: improve this API
+int_colinds(df::AbstractDataFrame, inds::AbstractVector{<:Integer}) =
+    convert(Vector{Int}, inds)
+# TODO: find more efficient solution
+int_colinds(df::AbstractDataFrame, inds::AbstractVector{Symbol}) =
+    indexin(inds, names(df))
+int_colinds(df::AbstractDataFrame, ind::Integer) = Int(ind)
+int_colinds(df::AbstractDataFrame, ind::Symbol) = findfirst(x -> x == ind, names(df))
+int_colinds(df::AbstractDataFrame, inds::AbstractVector{Bool}) =
+    find(inds)
 
-Base.names(df::AbstractDataFrame) = names(index(df))
-_names(df::AbstractDataFrame) = _names(index(df))
+sym_colinds(df::AbstractDataFrame, ind::Integer) = fieldname(typeof(columns(df)), ind)
+sym_colinds(df::AbstractDataFrame, ind::Symbol) = ind
 
 """
 Set column names
 
 
 ```julia
-names!(df::AbstractDataFrame, vals)
+names!(df::AbstractDataFrame, cnames)
 ```
 
 **Arguments**
 
 * `df` : the AbstractDataFrame
-* `vals` : column names, normally a Vector{Symbol} the same length as
+* `cnames` : column names, normally a Vector{Symbol} the same length as
   the number of columns in `df`
 * `allow_duplicates` : if `false` (the default), an error will be raised
   if duplicate names are found; if `true`, duplicate names will be suffixed
@@ -129,19 +126,9 @@ names!(df, [:a, :b, :a], allow_duplicates=true)  # renames second :a to :a_1
 ```
 
 """
-function names!(df::AbstractDataFrame, vals; allow_duplicates=false)
-    names!(index(df), vals; allow_duplicates=allow_duplicates)
-    return df
-end
+function names! end
 
-function rename!(df::AbstractDataFrame, args...)
-    rename!(index(df), args...)
-    return df
-end
-function rename!(f::Function, df::AbstractDataFrame)
-    rename!(f, index(df))
-    return df
-end
+function rename! end
 
 rename(df::AbstractDataFrame, args...) = rename!(copy(df), args...)
 rename(f::Function, df::AbstractDataFrame) = rename!(f, copy(df))
@@ -209,7 +196,7 @@ eltypes(df)
 ```
 
 """
-eltypes(df::AbstractDataFrame) = map!(eltype, Vector{Type}(size(df,2)), columns(df))
+eltypes(df::AbstractDataFrame) = map(eltype, columns(df))
 
 Base.size(df::AbstractDataFrame) = (nrow(df), ncol(df))
 function Base.size(df::AbstractDataFrame, i::Integer)
@@ -242,7 +229,7 @@ that is different than the number of rows present in `df`.
 """
 function Base.similar(df::AbstractDataFrame, rows::Integer = size(df, 1))
     rows < 0 && throw(ArgumentError("the number of rows must be positive"))
-    DataFrame(Any[similar(x, rows) for x in columns(df)], copy(index(df)))
+    DataFrame(Any[similar(x, rows) for x in columns(df)], names(df))
 end
 
 ##############################################################################
@@ -253,7 +240,7 @@ end
 
 function Base.:(==)(df1::AbstractDataFrame, df2::AbstractDataFrame)
     size(df1, 2) == size(df2, 2) || return false
-    isequal(index(df1), index(df2)) || return false
+    names(df1) == names(df2) || return false
     eq = true
     for idx in 1:size(df1, 2)
         coleq = df1[idx] == df2[idx]
@@ -266,7 +253,7 @@ end
 
 function Base.isequal(df1::AbstractDataFrame, df2::AbstractDataFrame)
     size(df1, 2) == size(df2, 2) || return false
-    isequal(index(df1), index(df2)) || return false
+    names(df1) == names(df2) || return false
     for idx in 1:size(df1, 2)
         isequal(df1[idx], df2[idx]) || return false
     end
@@ -279,7 +266,7 @@ end
 ##
 ##############################################################################
 
-Base.haskey(df::AbstractDataFrame, key::Any) = haskey(index(df), key)
+Base.haskey(df::AbstractDataFrame, key::Any) = isdefined(columns(df), key)
 Base.get(df::AbstractDataFrame, key::Any, default::Any) = haskey(df, key) ? df[key] : default
 Base.isempty(df::AbstractDataFrame) = size(df, 1) == 0 || size(df, 2) == 0
 
@@ -668,7 +655,7 @@ function without(df::AbstractDataFrame, icols::Vector{Int})
     df[newcols]
 end
 without(df::AbstractDataFrame, i::Int) = without(df, [i])
-without(df::AbstractDataFrame, c::Any) = without(df, index(df)[c])
+without(df::AbstractDataFrame, c::Any) = without(df, int_colinds(df, c))
 
 ##############################################################################
 ##

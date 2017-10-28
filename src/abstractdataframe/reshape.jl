@@ -81,7 +81,7 @@ function stack(df::AbstractDataFrame, measure_vars::Vector{Int},
     cnames = names(df)[id_vars]
     insert!(cnames, 1, value_name)
     insert!(cnames, 1, variable_name)
-    DataFrame(Any[repeat(_names(df)[measure_vars], inner=nrow(df)),   # variable
+    DataFrame(Any[repeat(names(df)[measure_vars], inner=nrow(df)),   # variable
                   vcat([df[c] for c in measure_vars]...),             # value
                   [repeat(df[c], outer=N) for c in id_vars]...],      # id_var columns
               cnames)
@@ -103,7 +103,7 @@ function stack(df::AbstractDataFrame, measure_var::Int, id_vars::Vector{Int};
 end
 function stack(df::AbstractDataFrame, measure_vars, id_vars;
                variable_name::Symbol=:variable, value_name::Symbol=:value)
-    stack(df, index(df)[measure_vars], index(df)[id_vars];
+    stack(df, int_colinds(df, measure_vars), int_colinds(df, id_vars);
           variable_name=variable_name, value_name=value_name)
 end
 # no vars specified, by default select only numeric columns
@@ -113,7 +113,7 @@ numeric_vars(df::AbstractDataFrame) =
 
 function stack(df::AbstractDataFrame, measure_vars = numeric_vars(df);
                variable_name::Symbol=:variable, value_name::Symbol=:value)
-    mv_inds = index(df)[measure_vars]
+    mv_inds = int_colinds(df, measure_vars)
     stack(df, mv_inds, setdiff(1:ncol(df), mv_inds);
           variable_name=variable_name, value_name=value_name)
 end
@@ -128,7 +128,7 @@ function melt(df::AbstractDataFrame, id_vars::Union{Int,Symbol};
 end
 function melt(df::AbstractDataFrame, id_vars;
               variable_name::Symbol=:variable, value_name::Symbol=:value)
-    id_inds = index(df)[id_vars]
+    id_inds = int_colinds(df, id_vars)
     stack(df, setdiff(1:ncol(df), id_inds), id_inds;
           variable_name=variable_name, value_name=value_name)
 end
@@ -221,7 +221,7 @@ function _unstack(df::AbstractDataFrame, rowkey::Int,
         kref = keycol.refs[k]
         if kref <= 0 # we have found missing in colkey
             if !warned_missing
-                warn("Missing value in variable $(_names(df)[colkey]) at row $k. Skipping.")
+                warn("Missing value in variable $(names(df)[colkey]) at row $k. Skipping.")
                 warned_missing = true
             end
             continue # skip processing it
@@ -254,26 +254,26 @@ function _unstack(df::AbstractDataFrame, rowkey::Int,
     copy!(col, levs)
     hadmissing && (col[end] = missing)
     df2 = DataFrame(unstacked_val, map(Symbol, levels(keycol)))
-    insert!(df2, 1, col, _names(df)[rowkey])
+    insert!(df2, 1, col, int_colinds(df, rowkey))
 end
 
 unstack(df::AbstractDataFrame, rowkey::ColumnIndex,
         colkey::ColumnIndex, value::ColumnIndex) =
-    unstack(df, index(df)[rowkey], index(df)[colkey], index(df)[value])
+    unstack(df, int_colinds(df, rowkey), int_colinds(df, colkey), int_colinds(df, value))
 
 # Version of unstack with just the colkey and value columns provided
 unstack(df::AbstractDataFrame, colkey::ColumnIndex, value::ColumnIndex) =
-    unstack(df, index(df)[colkey], index(df)[value])
+    unstack(df, int_colinds(df, colkey), int_colinds(df, value))
 
 # group on anything not a key or value
 unstack(df::AbstractDataFrame, colkey::Int, value::Int) =
-    unstack(df, setdiff(_names(df), _names(df)[[colkey, value]]), colkey, value)
+    unstack(df, setdiff(names(df), names(df)[[colkey, value]]), colkey, value)
 
 unstack(df::AbstractDataFrame, rowkeys, colkey::ColumnIndex, value::ColumnIndex) =
-    unstack(df, rowkeys, index(df)[colkey], index(df)[value])
+    unstack(df, rowkeys, int_colinds(df, colkey), int_colinds(df, value))
 
 unstack(df::AbstractDataFrame, rowkeys::AbstractVector{<:Real}, colkey::Int, value::Int) =
-    unstack(df, names(df)[rowkeys], colkey, value)
+    unstack(df, int_colinds(df, rowkeys), colkey, value)
 
 function unstack(df::AbstractDataFrame, rowkeys::AbstractVector{Symbol}, colkey::Int, value::Int)
     length(rowkeys) == 0 && throw(ArgumentError("No key column found"))
@@ -304,7 +304,7 @@ function _unstack(df::AbstractDataFrame, rowkeys::AbstractVector{Symbol},
         kref = keycol.refs[k]
         if kref <= 0
             if !warned_missing
-                warn("Missing value in variable $(_names(df)[colkey]) at row $k. Skipping.")
+                warn("Missing value in variable $(names(df)[colkey]) at row $k. Skipping.")
                 warned_missing = true
             end
             continue
@@ -523,7 +523,7 @@ function stackdf(df::AbstractDataFrame, measure_vars::Vector{Int},
     cnames = names(df)[id_vars]
     insert!(cnames, 1, value_name)
     insert!(cnames, 1, variable_name)
-    DataFrame(Any[RepeatedVector(_names(df)[measure_vars], nrow(df), 1),   # variable
+    DataFrame(Any[RepeatedVector(names(df)[measure_vars], nrow(df), 1),   # variable
                   StackedVector(Any[df[:,c] for c in measure_vars]),     # value
                   [RepeatedVector(df[:,c], 1, N) for c in id_vars]...],     # id_var columns
               cnames)
@@ -545,12 +545,12 @@ function stackdf(df::AbstractDataFrame, measure_var::Int, id_vars;
 end
 function stackdf(df::AbstractDataFrame, measure_vars, id_vars;
                  variable_name::Symbol=:variable, value_name::Symbol=:value)
-    stackdf(df, index(df)[measure_vars], index(df)[id_vars];
+    stackdf(df, int_colinds(df, measure_vars),int_colinds(df, id_vars);
             variable_name=variable_name, value_name=value_name)
 end
 function stackdf(df::AbstractDataFrame, measure_vars = numeric_vars(df);
                  variable_name::Symbol=:variable, value_name::Symbol=:value)
-    m_inds = index(df)[measure_vars]
+    m_inds = int_colinds(df, measure_vars)
     stackdf(df, m_inds, setdiff(1:ncol(df), m_inds);
             variable_name=variable_name, value_name=value_name)
 end
@@ -560,7 +560,7 @@ A stacked view of a DataFrame (long format); see `stackdf`
 """
 function meltdf(df::AbstractDataFrame, id_vars; variable_name::Symbol=:variable,
                 value_name::Symbol=:value)
-    id_inds = index(df)[id_vars]
+    id_inds = int_colinds(df, id_vars)
     stackdf(df, setdiff(1:ncol(df), id_inds), id_inds;
             variable_name=variable_name, value_name=value_name)
 end

@@ -1,4 +1,3 @@
-__precompile__(true)
 module DataFrames
 
 ##############################################################################
@@ -7,7 +6,7 @@ module DataFrames
 ##
 ##############################################################################
 
-using Reexport, StatsBase, SortingAlgorithms, Compat
+using NamedTuples, Reexport, StatsBase, SortingAlgorithms, Compat
 @reexport using CategoricalArrays, Missings
 using Base: Sort, Order
 
@@ -84,6 +83,7 @@ include("other/utils.jl")
 include("other/index.jl")
 
 include("abstractdataframe/abstractdataframe.jl")
+include("dataframe/typeddataframe.jl")
 include("dataframe/dataframe.jl")
 include("subdataframe/subdataframe.jl")
 include("groupeddataframe/grouping.jl")

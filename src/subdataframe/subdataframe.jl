@@ -108,11 +108,9 @@ end
 ##
 ##############################################################################
 
-index(sdf::SubDataFrame) = index(sdf.parent)
-
 # TODO: Remove these
 nrow(sdf::SubDataFrame) = ncol(sdf) > 0 ? length(sdf.rows)::Int : 0
-ncol(sdf::SubDataFrame) = length(index(sdf))
+ncol(sdf::SubDataFrame) = length(sdf.parent)
 
 function Base.getindex(sdf::SubDataFrame, colinds::Any)
     return sdf.parent[sdf.rows, colinds]
