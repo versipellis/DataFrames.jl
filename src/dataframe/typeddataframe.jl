@@ -4,14 +4,15 @@
 # Note that setindex() needs this definition to replace existing entries
 function Base.merge( lhs::NamedTuple, rhs::NamedTuple )
     nms = unique( vcat( fieldnames( lhs ), fieldnames( rhs )) )
-    name = NamedTuples.create_tuple( nms )
+    ty = NamedTuples.create_namedtuple_type( nms )
     # FIXME should handle the type only case
     vals = [ haskey( rhs, nm ) ? rhs[nm] : lhs[nm] for nm in nms ]
-    getfield(NamedTuples,name)(vals...)
+    ty(vals...)
 end
 
+# FIXME: why is this needed?
 function setindex{V}( t::NamedTuple, key::Symbol, val::V)
-    nt = getfield( NamedTuples, NamedTuples.create_tuple( [key] ))( val )
+    nt = NamedTuples.create_namedtuple_type( [key] )( val )
     return merge( t, nt )
 end
 
