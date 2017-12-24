@@ -254,7 +254,7 @@ function _unstack(df::AbstractDataFrame, rowkey::Int,
     copy!(col, levs)
     hadmissing && (col[end] = missing)
     df2 = DataFrame(unstacked_val, map(Symbol, levels(keycol)))
-    insert!(df2, 1, col, int_colinds(df, rowkey))
+    insert!(df2, 1, col, sym_colinds(df, rowkey))
 end
 
 unstack(df::AbstractDataFrame, rowkey::ColumnIndex,
@@ -273,7 +273,7 @@ unstack(df::AbstractDataFrame, rowkeys, colkey::ColumnIndex, value::ColumnIndex)
     unstack(df, rowkeys, int_colinds(df, colkey), int_colinds(df, value))
 
 unstack(df::AbstractDataFrame, rowkeys::AbstractVector{<:Real}, colkey::Int, value::Int) =
-    unstack(df, int_colinds(df, rowkeys), colkey, value)
+    unstack(df, names(df)[rowkeys], colkey, value)
 
 function unstack(df::AbstractDataFrame, rowkeys::AbstractVector{Symbol}, colkey::Int, value::Int)
     length(rowkeys) == 0 && throw(ArgumentError("No key column found"))

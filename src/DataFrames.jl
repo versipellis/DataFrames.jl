@@ -8,7 +8,7 @@ module DataFrames
 
 using NamedTuples, Reexport, StatsBase, SortingAlgorithms, Compat
 @reexport using CategoricalArrays, Missings
-using Base: Sort, Order
+using Base: Sort, Order, setindex
 
 if VERSION >= v"0.7.0-DEV.2738"
     const kwpairs = pairs

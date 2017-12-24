@@ -79,7 +79,7 @@ module TestDataFrame
                           c = CategoricalArray{Union{Float64, Missing}}(2))
     # https://github.com/JuliaData/Missings.jl/issues/66
     # @test missingdf ≅ similar(df, 2)
-    @test typeof.(similar(df, 2).columns) == typeof.(missingdf.columns)
+    @test typeof.(columns(similar(df, 2))) == typeof.(columns(missingdf))
     @test size(similar(df, 2)) == size(missingdf)
 
     # Associative methods
@@ -412,7 +412,7 @@ module TestDataFrame
 
     @testset "duplicate entries in unstack warnings" begin
         df = DataFrame(id=Union{Int, Missing}[1, 2, 1, 2],
-                       id2=Union{Int, Missing}[1, 2, 1, 2], 
+                       id2=Union{Int, Missing}[1, 2, 1, 2],
                        variable=["a", "b", "a", "b"], value=[3, 4, 5, 6])
         @static if VERSION >= v"0.6.0-dev.1980"
             @test_warn "Duplicate entries in unstack at row 3 for key 1 and variable a." unstack(df, :id, :variable, :value)
@@ -540,7 +540,7 @@ module TestDataFrame
         df = DataFrame(Any[CategoricalArray(1:10),
                            CategoricalArray(string.('a':'j'))])
         allowmissing!(df)
-        @test all(issubtype.(typeof.(df.columns), CategoricalVector))
+        @test all(c -> c isa CategoricalVector, columns(df))
         @test eltypes(df)[1] <: Union{CategoricalValue{Int}, Missing}
         @test eltypes(df)[2] <: Union{CategoricalString, Missing}
     end
@@ -550,12 +550,12 @@ module TestDataFrame
                        b = CategoricalArray(["foo"]),
                        c = [0.0],
                        d = CategoricalArray([0.0]))
-        @test typeof.(similar(df).columns) == typeof.(df.columns)
+        @test typeof.(columns(similar(df))) == typeof.(columns(df))
         @test size(similar(df)) == size(df)
 
         rows = size(df, 1) + 5
         @test size(similar(df, rows)) == (rows, size(df, 2))
-        @test typeof.(similar(df, rows).columns) == typeof.(df.columns)
+        @test typeof.(columns(similar(df, rows))) == typeof.(columns(df))
 
         e = @test_throws ArgumentError similar(df, -1)
         @test e.value.msg == "the number of rows must be positive"

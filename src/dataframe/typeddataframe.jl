@@ -10,8 +10,9 @@ function Base.merge( lhs::NamedTuple, rhs::NamedTuple )
     ty(vals...)
 end
 
-# FIXME: why is this needed?
-function setindex{V}( t::NamedTuple, key::Symbol, val::V)
+# Function identical to NamedTuples.setindex, but with reversed order of val/key
+# to match Base.setindex
+function Base.setindex{V}( t::NamedTuple, val::V, key::Symbol)
     nt = NamedTuples.create_namedtuple_type( [key] )( val )
     return merge( t, nt )
 end
@@ -324,7 +325,7 @@ function insert_single_column(df::TypedDataFrame,
     if isdefined(df.columns, col_ind)
         # setindex() does not support Integer indices
         col_sym = col_ind isa Symbol ? col_ind : fieldnames(df.columns)[col_ind]
-        new_columns = setindex(df.columns, col_sym, dv)
+        new_columns = setindex(df.columns, dv, col_sym)
     elseif col_ind isa Symbol
         C = eval(:(@NT($(col_ind)))){typeof(dv)}
         new_columns = merge(df.columns, C(dv))
@@ -746,14 +747,14 @@ Base.hcat(a::TypedDataFrame, b, c...) = hcat(hcat(a, b), c...)
 
 function allowmissing(df::TypedDataFrame, col::ColumnIndex)
     v = Vector{Union{eltype(df[col]), Missing}}(df.columns[col])
-    TypedDataFrame(setindex(df.columns, sym_colinds(df, col), v))
+    TypedDataFrame(setindex(df.columns, v, sym_colinds(df, col)))
 end
 
-function allowmissing(df::TypedDataFrame, cols::Vector{<:ColumnIndex}=1:size(df, 2))
+function allowmissing(df::TypedDataFrame, cols::AbstractVector{<:ColumnIndex}=1:size(df, 2))
     columns = df.columns
     for col in cols
-        columns = setindex(columns, sym_colinds(df, col),
-                           Vector{Union{eltype(df[col]), Missing}}(df[col]))
+        columns = setindex(columns, Vector{Union{eltype(df[col]), Missing}}(df[col]),
+                           sym_colinds(df, col))
     end
     TypedDataFrame(columns)
 end
@@ -766,12 +767,12 @@ end
 ##############################################################################
 
 CategoricalArrays.categorical(df::TypedDataFrame, cname::ColumnIndex) =
-    TypedDataFrame(setindex(df.columns, sym_colinds(df, cname), categorical(df[cname])))
+    TypedDataFrame(setindex(df.columns, categorical(df[cname]), sym_colinds(df, cname)))
 
 function CategoricalArrays.categorical(df::TypedDataFrame, cnames::Vector{<:ColumnIndex})
     columns = df.columns
     for cname in cnames
-        columns = setindex(columns, sym_colinds(df, cname), categorical(df[cname]))
+        columns = setindex(columns, categorical(df[cname]), sym_colinds(df, cname))
     end
     TypedDataFrame(columns)
 end

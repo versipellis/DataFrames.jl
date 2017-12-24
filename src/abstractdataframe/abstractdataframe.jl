@@ -84,10 +84,17 @@ const ColumnIndex = Union{Integer, Symbol}
 int_colinds(df::AbstractDataFrame, inds::AbstractVector{<:Integer}) =
     convert(Vector{Int}, inds)
 # TODO: find more efficient solution
-int_colinds(df::AbstractDataFrame, inds::AbstractVector{Symbol}) =
-    indexin(inds, names(df))
+function int_colinds(df::AbstractDataFrame, inds::AbstractVector{Symbol})
+    res = indexin(inds, names(df))
+    any(iszero, res) && throw(KeyError(inds[findfirst(iszero, res)]))
+    res
+end
 int_colinds(df::AbstractDataFrame, ind::Integer) = Int(ind)
-int_colinds(df::AbstractDataFrame, ind::Symbol) = findfirst(x -> x == ind, names(df))
+function int_colinds(df::AbstractDataFrame, ind::Symbol)
+    res = findfirst(x -> x == ind, names(df))
+    res == 0 && throw(KeyError(ind))
+    res
+end
 int_colinds(df::AbstractDataFrame, inds::AbstractVector{Bool}) =
     find(inds)
 

@@ -249,7 +249,7 @@ end
 
 # df[SingleColumnIndex] = Single Item (EXPANDS TO NROW(df) if NCOL(df) > 0)
 function Base.setindex!(df::DataFrame, v, col_ind::ColumnIndex)
-    df.typed = setindex(df.typed, v, col_ind)    
+    df.typed = setindex(df.typed, v, col_ind)
     df
 end
 
