@@ -112,6 +112,12 @@ end
 nrow(sdf::SubDataFrame) = ncol(sdf) > 0 ? length(sdf.rows)::Int : 0
 ncol(sdf::SubDataFrame) = length(sdf.parent)
 
+function columns(sdf::SubDataFrame)
+    NT = NamedTuples.create_namedtuple_type(names(sdf))
+    NT((sdf[i] for i in 1:size(sdf, 2))...)
+end
+Base.names(sdf::SubDataFrame) = names(sdf.parent)
+
 function Base.getindex(sdf::SubDataFrame, colinds::Any)
     return sdf.parent[sdf.rows, colinds]
 end

@@ -15,14 +15,15 @@ module TestCat
     df5 = DataFrame(Any[Union{Int, Missing}[1,2,3,4], nvstr])
 
     dfh = hcat(df3, df4)
-    @test size(dfh, 2) == 3
-    @test names(dfh) ≅ [:x1, :x1_1, :x2]
-    @test dfh[:x1] ≅ df3[:x1]
+    # TODO: deduplicate names with makeunique=true
+    @test size(dfh, 2) == 2
+    @test names(dfh) ≅ [:x1, :x2]
+    @test dfh[:x1] ≅ df4[:x1]
     @test dfh ≅ [df3 df4]
     @test dfh ≅ DataFrames.hcat!(DataFrame(), df3, df4)
 
     dfh3 = hcat(df3, df4, df5)
-    @test names(dfh3) == [:x1, :x1_1, :x2, :x1_2, :x2_1]
+    @test names(dfh3) == [:x1, :x2]
     @test dfh3 ≅ hcat(dfh, df5)
     @test dfh3 ≅ DataFrames.hcat!(DataFrame(), df3, df4, df5)
 
@@ -31,18 +32,10 @@ module TestCat
     @testset "hcat ::AbstractDataFrame" begin
         df = DataFrame(A = repeat('A':'C', inner=4), B = 1:12)
         gd = groupby(df, :A)
-        answer = DataFrame(A = fill('A', 4), B = 1:4, A_1 = 'B', B_1 = 5:8, A_2 = 'C', B_2 = 9:12)
+        # TODO: deduplicate names with makeunique=true
+        answer = DataFrame(A = 'C', B = 9:12)
         @test hcat(gd...) == answer
-        answer = answer[1:4]
-        @test hcat(gd[1], gd[2]) == answer
-    end
-
-    @testset "hcat ::AbstractDataFrame" begin
-        df = DataFrame(A = repeat('A':'C', inner=4), B = 1:12)
-        gd = groupby(df, :A)
-        answer = DataFrame(A = fill('A', 4), B = 1:4, A_1 = 'B', B_1 = 5:8, A_2 = 'C', B_2 = 9:12)
-        @test hcat(gd...) == answer
-        answer = answer[1:4]
+        answer = DataFrame(A = 'B', B = 5:8)
         @test hcat(gd[1], gd[2]) == answer
     end
 

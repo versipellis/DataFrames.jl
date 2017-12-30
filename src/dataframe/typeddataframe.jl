@@ -741,20 +741,20 @@ Base.hcat(a::TypedDataFrame, b, c...) = hcat(hcat(a, b), c...)
 
 ##############################################################################
 ##
-## Nullability
+## Missing values support
 ##
 ##############################################################################
 
-function allowmissing(df::TypedDataFrame, col::ColumnIndex)
-    v = Vector{Union{eltype(df[col]), Missing}}(df.columns[col])
+function Missings.allowmissing(df::TypedDataFrame, col::ColumnIndex)
+    v = allowmissing(df.columns[col])
     TypedDataFrame(setindex(df.columns, v, sym_colinds(df, col)))
 end
 
-function allowmissing(df::TypedDataFrame, cols::AbstractVector{<:ColumnIndex}=1:size(df, 2))
+function Missings.allowmissing(df::TypedDataFrame,
+                               cols::AbstractVector{<:ColumnIndex}=1:size(df, 2))
     columns = df.columns
     for col in cols
-        columns = setindex(columns, Vector{Union{eltype(df[col]), Missing}}(df[col]),
-                           sym_colinds(df, col))
+        columns = setindex(columns, allowmissing(df[col]), sym_colinds(df, col))
     end
     TypedDataFrame(columns)
 end
