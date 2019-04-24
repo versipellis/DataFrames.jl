@@ -4,7 +4,7 @@ CategoricalArrays 0.5.2
 StatsBase 0.11.0
 SortingAlgorithms
 Reexport
-WeakRefStrings 0.4.0
+WeakRefStrings 0.6.0
 DataStreams 0.3.0
 Compat 0.59.0
 Tables 0.1.15
