@@ -7,7 +7,8 @@ module DataFrames
 ##############################################################################
 
 using Statistics, Printf, REPL
-using Reexport, StatsBase, SortingAlgorithms, Compat, Unicode, PooledArrays
+using Reexport, SortingAlgorithms, Compat, Unicode, PooledArrays
+using DataAPI
 @reexport using CategoricalArrays, Missings
 using Base.Sort, Base.Order, Base.Iterators
 
@@ -33,7 +34,7 @@ export AbstractDataFrame,
        deletecols!,
        deletecols,
        deleterows!,
-       describe,
+       DataAPI.describe,
        disallowmissing!,
        dropmissing,
        dropmissing!,
